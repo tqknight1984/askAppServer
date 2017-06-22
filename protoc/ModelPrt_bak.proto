@@ -1,0 +1,189 @@
+option java_package = "com.xiyuan.taketaxi.model";
+
+//请求对象
+message Request {
+	message SendCode {
+		required string phone = 1;
+		required int32 loginOrReg = 2;
+	}
+	
+	message Registe {
+		required string phone = 1;
+		required string name = 2;
+		required string code = 3;
+	}
+	
+	message Login {
+		required string phone = 1;
+		optional string code = 2;
+		optional string token = 3;
+	}
+	
+	message Logout {
+		required string id = 1;
+		required string token = 2;
+	}
+	
+	message Location {
+		required double longitude = 1;
+		required double latitude = 2;
+	}
+	
+	message StartLoc {
+		required double longitude = 1;
+		required double latitude = 2;
+	}
+	
+	message DestinationLoc {
+		required double longitude = 1;
+		required double latitude = 2;
+	}
+	
+	message OrderAccept {
+		required string orderId = 1;
+		required string userId = 2;
+	}
+	
+	message OrderInfo {
+		required string orderId = 1;
+		required string userId = 2;
+		optional string driverId = 3;
+		optional int32 status = 4;
+		optional float money = 5;
+	}
+	
+	//以下6个字段是每次请求必须的，类似于请求头
+	//required是必选参数，如果不提供这个参数，在构造请求参数的时候就会报错
+	required string id = 1;//请求id，服务器在应答的时候也会采用相同的id返回结果，用于客户端进行相应的回调
+	required int32 clientType = 2;//客户端类型：0普通用户端，1司机端
+	required string userId = 3;//用户id，未登录的时候传空字符串，登录之后请传用户id
+	required string deviceId = 4;//设备唯一id
+	required string tempToken = 5;//已登录的标识，每次登录后都会产生的一个临时票据，用于检测用户是否登录，他和token有区别，token会持久化到redis，可用于下一次的自动登录监测，而这个tempToken只用于一次登录后的状态校验
+	required string method = 6;//请求的链接/方法，在连接服务器的时候请求root_url可以获取到所有的请求连接，这个连接地址和正常的url不同，形式如user/login,user/registe
+	
+	//以下是每次请求的具体请求参数，这些参数都是message类型，在上面已经有定义了
+	//optional是可选参数（例如请求发送验证码，则只需要给sendCode这个字段赋值，其他字段不用管；创建订单的时候需要提供起点和终点，所以startLoc和destinationLoc都需要）
+	optional SendCode sendCode = 7;
+	optional Registe registe = 8;
+	optional Login login = 9;
+	optional Logout logout = 10;
+	optional Location location = 11;
+	optional StartLoc startLoc = 12;
+	optional DestinationLoc destinationLoc = 13;
+	optional OrderAccept orderAccept = 14;
+	optional OrderInfo orderInfo = 15;
+}
+
+
+//应答对象
+//一次应答可能包含多个不同请求的应答结果，即一个Responce里面可能包含多个ResponceItem，repeated修饰符就是指这个字段可以存储一个数组
+message Responce {
+	message ResponceItem {
+		message Test {
+			optional string msg = 1;
+		}
+		
+		message RootUrlRST {
+			required string sendCode = 1;
+			required string registe = 2;
+			required string login = 3;
+			required string logout = 4;
+			required string aroundDriver = 6;
+			required string orderCreate = 7;
+			required string orderAccept = 8; 
+			required string updateAndGetLocation = 9;
+			required string orderUpdate = 10;
+		}
+		
+		message SendCodeRST {
+			optional int64 nextRemain = 1;
+		}
+		
+		message RegisteRST {
+			required int64 id = 1;
+			required string phone = 2;
+			required string name = 3;
+			required int32 type = 4;
+		}
+		
+		message LoginRST {
+			required int64 id = 1;
+			required string phone = 2;
+			required string name = 3;
+			required int32 type = 4;
+			required string token = 5;
+			required string tempToken = 6;
+		}
+		
+		message AroundDriverRST {
+			required string userId = 1;
+			required string deviceId = 2;
+			required double longitude = 3;
+			required double latitude = 4;
+		}
+		
+		message OrderCreateRST {
+			required string orderId = 1;
+			required string userId = 2;
+			required int32 status = 3;
+			required int64 createTime = 4;
+			required double startLon = 5;
+			required double startLat = 6;
+			required double destinationLon = 7;
+			required double destinationLat = 8;
+		}
+		
+		message OrderCreateFailRST {
+			required int32 reason = 1;//下单失败的原因，0未登录，1订单持久化失败
+		}
+		
+		message OrderPush {
+			required string orderId = 1;
+			required string userId = 2;
+			required int64 createTime = 3;
+			required double start_lon = 4;
+			required double start_lat = 5;
+			required double destination_lon = 6;
+			required double destination_lat = 7;
+		}
+		
+		message OrderAcceptRST {
+			required string orderId = 1;
+			required string userId = 2;
+			required string driverId = 3;
+		}
+		
+		message LocationRST {
+			required double longitude = 1;
+			required double latitude = 2;
+		}
+		
+		message OrderUpdatePush {
+			required string orderId = 1;
+			required string userId = 2;
+			optional string driverId = 3;
+			required int32 status = 4;
+		}
+		
+		//每一个ResponceItem都带有的三个参数，msg不是必选参数，但服务器几乎都会给这个字段赋值
+		required string id = 1;//和一个请求的id相同，用于回调，另外服务器的主动推送采用的id都是特殊定义的，客户端在初始化客户端的时候应该注册所有的推送回调函数
+		required bool success = 2;//请求是否成功
+		optional string msg = 3;//请求的应答消息
+		
+		//应答的具体内容，repeated字段是一个数组（可以为空），optional可选，以RST结尾的字段都是针对<请求-应答>模式的返回内容，而以PUSH结尾的都是针对服务服务器主动推送的内容
+		repeated Test test = 4;//测试用的字段，不用管
+		optional RootUrlRST rootUrlRST = 5;//返回地址列表
+		optional SendCodeRST sendCodeRST = 6;//发送验证码的结果
+		optional RegisteRST registeRST = 7;//注册结果
+		optional LoginRST loginRST = 8;//登录结果
+		repeated AroundDriverRST aroundDriverRST = 9;//搜索周围司机的结果
+		optional OrderCreateRST orderCreateRST = 10;//订单创建成功后的详细信息
+		optional OrderCreateFailRST orderCreateFailRST = 11;//订单创建失败的原因
+		optional OrderPush orderPush = 12;//订单推送
+		optional OrderAcceptRST orderAcceptRST = 13;//接受订单成功后的返回信息
+		optional LocationRST locationRST = 14;//获取用户司机的地址
+		optional OrderUpdatePush orderUpdatePush = 15;//用户更新订单状态时推送给司机的信息
+	}
+	
+	repeated ResponceItem responces = 1;
+}

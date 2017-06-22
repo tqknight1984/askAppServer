@@ -1,0 +1,19 @@
+	message User {
+		required string userid = 1;
+		required string deviceId = 1;
+		optional string userIcon = 2;//头像
+		required string nickname = 3;
+		optional string desc = 4;//描述
+		required string phone = 5;
+		required string password = 6;
+		
+		optional string brith = 7;//出生年月
+		optional string address = 8;//地址
+		required string sex = 9;//性别
+		optional string company = 10;//公司
+		optional string weichat = 11;//微信
+		optional string  qq= 12;
+		optional string email = 13;
+		
+		required string regDate = 14;//注册日期
+	}
